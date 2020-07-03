@@ -1,13 +1,10 @@
 package main
 
 import (
-	"encoding/json"
-	"reflect"
 	"strings"
-
-	//"flag"
-	"fmt"
 	"time"
+
+	"encoding/json"
 
 	"github.com/araddon/dateparse"
 	"github.com/aws/aws-lambda-go/events"
@@ -16,25 +13,21 @@ import (
 
 var (
 	DefaultTimeZones = []string{
-		"America/Argentina/Buenos_Aires",
 		"America/Los_Angeles",
 		"America/New_York",
-		"America/Sao_Paulo",
-		"Asia/Hong_Kong",
 		"Asia/Shanghai",
-		"Australia/Sydney",
-		"Europe/Berlin",
 		"Europe/Istanbul",
-		"Europe/London",
-		"Europe/Moscow",
-		"Europe/Kiev",
-		"Pacific/Auckland",
 	}
 )
 
-type ResponsePayload struct {
-	RefTime   string            `json:"referenceTime"`
-	Timezones map[string]string `json:"timezones"`
+type ComparedTimezones struct {
+	Reference Timezone   `json:"ref"`
+	Others    []Timezone `json:"others"`
+}
+
+type Timezone struct {
+	LocalTime string `json:"localTime"`
+	Zone      string `json:"zone"`
 }
 
 func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
@@ -42,7 +35,7 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	var localTimeZone, localTime, other string
 	var otherZones []string
 
-	if localTimeZone, ok = request.QueryStringParameters["zone"]; !ok {
+	if localTimeZone, ok = request.QueryStringParameters["from"]; !ok {
 		localTimeZone = "UTC"
 	}
 
@@ -50,9 +43,7 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		localTime = time.Now().Format(time.RFC822)
 	}
 
-	fmt.Println(">>>", reflect.ValueOf(request.QueryStringParameters).MapKeys())
-
-	if other, ok = request.QueryStringParameters["other"]; !ok {
+	if other, ok = request.QueryStringParameters["to"]; !ok {
 		otherZones = DefaultTimeZones
 	} else {
 		otherZones = strings.Split(other, ",")
@@ -67,33 +58,35 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	}, nil
 }
 
-func compareToTimeZones(localTimeZone string, localTime string, timeZones []string) ResponsePayload {
-
+func compareToTimeZones(localTimeZone string, localTime string, timeZones []string) ComparedTimezones {
 	if localTimeZone == "" {
-		return ResponsePayload{}
+		return ComparedTimezones{}
 	}
 
 	refLocation, err := time.LoadLocation(localTimeZone)
 	if err != nil {
-		return ResponsePayload{}
+		return ComparedTimezones{}
 	}
 
 	time.Local = refLocation
 
 	refTime, err := dateparse.ParseLocal(localTime)
 	if err != nil {
-		return ResponsePayload{}
+		return ComparedTimezones{}
 	}
 
-	results := ResponsePayload{RefTime: refTime.Format(time.RFC822), Timezones: map[string]string{}}
+	localTz := Timezone{Zone: localTimeZone, LocalTime: refTime.Format(time.RFC822)}
+	results := ComparedTimezones{Reference: localTz, Others: []Timezone{}}
 
 	for _, tz := range timeZones {
 		targetLocation, err := time.LoadLocation(tz)
 		if err != nil {
-			results.Timezones[tz] = err.Error()
+			continue
 		}
 
-		results.Timezones[tz] = refTime.In(targetLocation).Format(time.RFC822)
+		ltime := refTime.In(targetLocation).Format(time.RFC822)
+		ltimezone := Timezone{LocalTime: ltime, Zone: tz}
+		results.Others = append(results.Others, ltimezone)
 	}
 
 	return results

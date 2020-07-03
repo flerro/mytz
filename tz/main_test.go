@@ -12,9 +12,9 @@ func TestHandler(t *testing.T) {
 	t.Run("Successful Request", func(t *testing.T) {
 		response, err := handler(events.APIGatewayProxyRequest{
 			QueryStringParameters: map[string]string{
-				"zone":  "Europe/Rome",
-				"time":  "2019-07-01T12:32",
-				"other": "Europe/Kiev,Pacific/Auckland"},
+				"time": "2019-07-01T12:32",
+				"from": "Europe/Rome",
+				"to":   "Europe/Kiev,Pacific/Auckland"},
 		})
 
 		if err != nil {
@@ -23,14 +23,14 @@ func TestHandler(t *testing.T) {
 
 		payload := decodePayload(t, response.Body)
 
-		assertEqual(t, payload.RefTime, "01 Jul 19 12:32 CEST", "RefTime mismatch")
-		assertEqual(t, len(payload.Timezones), 2, "Too many timezones returned")
+		assertEqual(t, payload.Reference, Timezone{"01 Jul 19 12:32 CEST", "Europe/Rome"}, "Reference mismatch")
+		assertEqual(t, len(payload.Others), 2, "Others count mismatch")
 
-		assertEqual(t, payload.Timezones["Europe/Kiev"], "01 Jul 19 13:32 EEST", "Europe/Kiev mismatch")
-		assertEqual(t, payload.Timezones["Pacific/Auckland"], "01 Jul 19 22:32 NZST", "Europe/Kiev mismatch")
+		assertEqual(t, payload.Others[0], Timezone{Zone: "Europe/Kiev", LocalTime: "01 Jul 19 13:32 EEST"}, "Timezone mismatch")
+		assertEqual(t, payload.Others[1], Timezone{Zone: "Pacific/Auckland", LocalTime: "01 Jul 19 22:32 NZST"}, "Timezone mismatch")
 	})
 
-	t.Run("All timezones", func(t *testing.T) {
+	t.Run("Return default timezones", func(t *testing.T) {
 		response, err := handler(events.APIGatewayProxyRequest{
 			QueryStringParameters: map[string]string{
 				"zone": "Europe/Rome",
@@ -42,12 +42,12 @@ func TestHandler(t *testing.T) {
 		}
 
 		payload := decodePayload(t, response.Body)
-		assertEqual(t, len(payload.Timezones), len(DefaultTimeZones), "Invalid Timezones returned")
+		assertEqual(t, len(payload.Others), len(DefaultTimeZones), "Invalid Others returned")
 	})
 }
 
-func decodePayload(t *testing.T, body string) ResponsePayload {
-	var payload ResponsePayload
+func decodePayload(t *testing.T, body string) ComparedTimezones {
+	var payload ComparedTimezones
 	if err := json.Unmarshal([]byte(body), &payload); err != nil {
 		t.Fatal("Unable to unmarshal request")
 	}
