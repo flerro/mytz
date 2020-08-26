@@ -1,8 +1,8 @@
 # mytz
 
-Timezones as a service, a simple serverless application using GO
+Timezones as a service, a simple serverless application using GO.
 
-The `main.go` file contains the business logic + AWS realated code (better separation of concerns may be needed for a non-demo application). Application components are defined in `template.yaml`, their lifecycle is completely handled by the CloudFormation service on AWS (no manual activity on the AWS Console).
+The `main.go` file contains the business logic + AWS related code (better separation of concerns is recommended for real-world apps). Application components are defined in `template.yaml`, their lifecycle is completely handled by the CloudFormation service on AWS (no manual activity on the AWS Console).
 
 ## Requirements
 
@@ -13,7 +13,7 @@ The `main.go` file contains the business logic + AWS realated code (better separ
 
 ## Build / Run locally / Deploy
 
-The provided `Makefile` wraps the `sam` cli utility to execute several tasks:
+The provided `Makefile` wraps the `SAM CLI` utility to execute several tasks:
 
 - build the go function 
   ```
@@ -40,7 +40,9 @@ The provided `Makefile` wraps the `sam` cli utility to execute several tasks:
   make destroy
   ```
 
-If `make` command is not available on your system, use `sam` cli directly (tip: `Makefile` format is quite readable ;)
+If `make` command is not available on your system, use `SAM CLI` directly. 
+
+Tip: `Makefile` format is quite readable ;)
 
 ## Testing
 
