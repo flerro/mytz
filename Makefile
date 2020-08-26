@@ -18,3 +18,9 @@ package:
 
 deploy: package build
 	sam deploy --template-file /tmp/${stackName}-out.yaml --capabilities CAPABILITY_IAM --stack-name mytz --s3-bucket ${bucket} ${deployEnv}
+
+logs:
+	sam logs -n MyTzFunction --stack-name ${stackName} ${deployEnv}
+
+destroy:
+	aws cloudformation delete-stack --stack-name ${stackName} ${deployEnv} --output text
